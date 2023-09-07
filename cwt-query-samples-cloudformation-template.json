@@ -1,0 +1,563 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "CloudWatch Training: Demonstrate capabilites of CloudWatch Log Insights by analyzing AWS WAF access logs.",
+	"Parameters": {
+		"LogGroupToQuery": {
+			"Type": "String",
+			"Description": "Select CloudWatch Log Group containing AWS WAF access logs.",
+			"ConstraintDescription": "Provided queries assume WAF access logs are present in this log group.",
+			"Default": "aws-waf-logs-CWT"
+		}
+	},
+	"Resources": {
+		"QueryAggregateTopCountActions": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-COUNT",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"# Aggregate All Requests by COUNT Action. Including “EXCLUDED_AS_COUNT”(Managed rules) and “action”:“COUNT”(Custom rules or Override rule group action to count)\n",
+							"fields @message\n",
+							"| filter @message like \"COUNT\"\n",
+							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| parse @message '\"nonTerminatingMatchingRules\":[{*}]' as nonTerminatingMatchingRules\n",
+							"| parse @message '\"excludedRules\":[{*}]' as excludedRules\n",
+							"| stats count(*) as RequestCount by httpRequest.clientIp as ClientIP, httpRequest.country as Country, UserAgent, Host, httpRequest.uri as Uri, nonTerminatingMatchingRules, excludedRules\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateTopClientIPs": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-Client-IPs",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate All Requests by Client IP\n",
+							"stats count(*) as RequestCount by httpRequest.clientIp as ClientIP\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateTopAggregateIpCountryUAHostUriTerminatingRuleId": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-Aggregate-IP-Country-UserAgent-Host-URI-TerminatingRuleID",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate All Requests by aggregation of IP, Country, User-Agent, Host, Request URI, Terminating Rule ID\n",
+							"parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| stats count(*) as RequestCount by httpRequest.clientIp as ClientIP, httpRequest.country as Country, UserAgent, Host, httpRequest.uri as Uri, terminatingRuleId\n",
+							"| sort RequestCount desc\n",
+							"| limit 100\n"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateTopCountries": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-Countries",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate All Requests by Country\n",
+							"stats count(*) as RequestCount by httpRequest.country as Country\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateTopHosts": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-Hosts",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate All Requests by Host\n",
+							"parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| stats count(*) as RequestCount by Host\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateTopIpBlockedByRateBasedRule": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-IP_blocked_by_rate-based_rule",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"# Top IPs blocked by rate based rule aggregated by IP and source country\n",
+							"fields httpRequest.clientIp\n",
+							"| filter terminatingRuleType =\"RATE_BASED\"\n",
+							"| stats count(*) as requestCount by httpRequest.clientIp, httpRequest.country\n",
+							"| sort requestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateTerminatingRule": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-Terminating-Rule",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate All Requests by Terminating Rule\n",
+							"stats count(*) as RequestCount by terminatingRuleId\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateUri": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-URI",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate All Requests by URI\n",
+							"stats count(*) as RequestCount by httpRequest.uri as Uri\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateUserAgent": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Top-UserAgent",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate All Requests by UserAgent\n",
+							"parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| stats count(*) as RequestCount by UserAgent\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateAllowRequests": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Aggregate-Allow-Requests",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate ALLOW Requests by ClientIP, Country, URI and Rule\n",
+							"fields httpRequest.clientIp as ClientIP, httpRequest.country as Country, httpRequest.uri as URI, terminatingRuleId as Rule\n",
+							"| filter action = \"ALLOW\"\n",
+							"| stats count(*) as RequestCount by Country, ClientIP, URI, Rule\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryAggregateBlockRequests": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Aggregate-Block-Requests",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate BLOCK Requests by ClientIP, Country, Host, URI and Rule\n",
+							"parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| fields httpRequest.clientIp as ClientIP, httpRequest.country as Country, httpRequest.uri as URI, terminatingRuleId as Rule\n",
+							"| filter action = \"BLOCK\"\n",
+							"| stats count(*) as RequestCount by Country, ClientIP, Host, URI, Rule\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterCountAction": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-COUNT_Action",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"# Extracts both “EXCLUDED_AS_COUNT”(Managed rules) and “action”:“COUNT”(Custom rules or Override rule group action to count) and display the counted rules and requests.\n",
+							"fields @timestamp, @message\n",
+							"| filter @message like \"COUNT\"\n",
+							"| sort @timestamp desc\n",
+							"| parse @message '\"nonTerminatingMatchingRules\":[{*}]' as nonTerminatingMatchingRules\n",
+							"| parse @message '\"excludedRules\":[{*}]' as excludedRules\n",
+							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country, excludedRules, nonTerminatingMatchingRules\n",
+							"| limit 100\n"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterIpBlockedByRateBasedRule": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-IP_blocked_by_rate-based_rule",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"# Extracts terminatingRuleType =\"RATE_BASED\" and display the blocked requests and the rule ID.\n",
+							"fields @timestamp, @message\n",
+							"| filter terminatingRuleType =\"RATE_BASED\"\n",
+							"| sort @timestamp desc\n",
+							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country, terminatingRuleId\n",
+							"| limit 100\n"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterCountPerRule": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-COUNT-per-rule",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"# If you want to see the counted requests for specific rule, you can add the ruleId name to filter.\n",
+							"fields @timestamp, @message\n",
+							"| filter @message like /\"EXCLUDED_AS_COUNT\",\"ruleId\":\"HostingProviderIPList\"/\n",
+							"| sort @timestamp desc\n",
+							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country\n",
+							"| limit 100\n"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterXSSSQL": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-XSS-SQL",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Filter for Cross-Site Scripting / SQL Injection\n",
+							"fields @timestamp, terminatingRuleId, action, httpRequest.clientIp as ClientIP, httpRequest.country as Country, terminatingRuleMatchDetails.0.conditionType as ConditionType, terminatingRuleMatchDetails.0.location as Location, terminatingRuleMatchDetails.0.matchedData.0 as MatchedData\n",
+							"| filter (ConditionType like \"XSS\" or ConditionType like \"SQL\")\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterSpecificRule": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-Specific-Rule",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Filter on a Specific Rule\n",
+							"fields terminatingRuleId as Rule, action, terminatingRuleMatchDetails.0.conditionType as ConditionType, terminatingRuleMatchDetails.0.location as Location, terminatingRuleMatchDetails.0.matchedData.0 as MatchedData, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI\n",
+							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| filter Rule = \"PREFMManaged-AWSManagedRulesCommonRuleSet-1639427788235\"\n",
+							"| display action, Country, ClientIP, ConditionType, MatchedData, URI, Host, UserAgent\n",
+							"| sort ConditionType desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterSpecificString": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-Specific-String",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Filter on a Specific String\n",
+							"fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.httpMethod as Method,httpRequest.uri as URI\n",
+							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| filter @message like \"{jndi:ldap\"\n",
+							"| sort action, URI desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterHost": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-Host",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Filter on Host\n",
+							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| filter Host != \"cwt.rtaa.ninja\"\n",
+							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterHostandAgg": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-Host-and-Aggregate",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Filter on Host & Aggregate on Rule, Action, Country, ClientIP\n",
+							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| filter Host != \"cwt.rtaa.ninja\"\n",
+							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI\n",
+							"| stats count() as Requests by Host, Rule, action, Country, ClientIP\n",
+							"| sort Requests desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterUserAgent": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-UserAgent",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Filter on UserAgent\n",
+							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| filter userAgent like \"Mozilla\"\n",
+							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterPOST": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-POST",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.httpMethod as Method, httpRequest.uri as URI, httpRequest.requestId as RequestID\n",
+							"| filter httpRequest.httpMethod = \"POST\"\n",
+							"| display Rule, action, Country, ClientIP, Method, URI, Host, UserAgent, RequestID\n",
+							"| sort Rule, action desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterNotCountryX": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Filter-Not-Country-X",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Filter requests not originating from Country X\n",
+							"fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI\n",
+							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| filter Country != \"US\"\n",
+							"| sort Country, action desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryTimeSeriesTerminatingRule": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "CWT-WAF-Time-Series-Terminating-Rule",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Time Series by Terminating Rule\n",
+							"filter terminatingRuleId = \"PREFMManaged-AWSManagedRulesCommonRuleSet-1639427788235\"\n",
+							"| stats count(*) as requestCount by bin(30m)"
+						]
+					]
+				}
+			}
+		}
+	}
+}
