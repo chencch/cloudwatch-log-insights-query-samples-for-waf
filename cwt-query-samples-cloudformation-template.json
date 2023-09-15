@@ -10,7 +10,7 @@
 		}
 	},
 	"Resources": {
-		"QueryAggregateTopCountActions": {
+		"QueryTopCount": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -18,7 +18,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-COUNT",
+				"Name": "WAF-query-samples/CWT-WAF-Top-COUNT",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -38,7 +38,7 @@
 				}
 			}
 		},
-		"QueryAggregateTopClientIPs": {
+		"QueryTopClientIPs": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -46,7 +46,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-Client-IPs",
+				"Name": "WAF-query-samples/CWT-WAF-Top-Client-IPs",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -60,7 +60,7 @@
 				}
 			}
 		},
-		"QueryAggregateTopAggregateIpCountryUAHostUriTerminatingRuleId": {
+		"QueryTopAggregateIpCountryUAHostUriTerminatingRuleId": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -68,7 +68,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-Aggregate-IP-Country-UserAgent-Host-URI-TerminatingRuleID",
+				"Name": "WAF-query-samples/CWT-WAF-Top-Aggregate-IP-Country-UserAgent-Host-URI-TerminatingRuleID",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -76,15 +76,16 @@
 							"#Aggregate All Requests by aggregation of IP, Country, User-Agent, Host, Request URI, Terminating Rule ID\n",
 							"parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
 							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
-							"| stats count(*) as RequestCount by httpRequest.clientIp as ClientIP, httpRequest.country as Country, UserAgent, Host, httpRequest.uri as Uri, terminatingRuleId\n",
+							"| parse @message '\"labels\":[*]' as Labels\n",
+							"| stats count(*) as RequestCount by httpRequest.clientIp as ClientIP, httpRequest.country as Country, UserAgent, Host, httpRequest.uri as Uri, terminatingRuleId, Labels\n",
 							"| sort RequestCount desc\n",
-							"| limit 100\n"
+							"| limit 100"
 						]
 					]
 				}
 			}
 		},
-		"QueryAggregateTopCountries": {
+		"QueryTopAllowBlock": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -92,7 +93,31 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-Countries",
+				"Name": "WAF-query-samples/CWT-WAF-Top-Allow-Block",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"#Aggregate All Requests by Terminating Rule\n",
+							"fields @message\n",
+							"| parse @message '\"labels\":[*]' as Labels\n",
+							"| stats count(*) as RequestCount by terminatingRuleId, Labels\n",
+							"| sort RequestCount desc\n",
+							"| limit 100"
+						]
+					]
+				}
+			}
+		},
+		"QueryTopCountries": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "WAF-query-samples/CWT-WAF-Top-Countries",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -106,7 +131,7 @@
 				}
 			}
 		},
-		"QueryAggregateTopHosts": {
+		"QueryTopHosts": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -114,7 +139,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-Hosts",
+				"Name": "WAF-query-samples/CWT-WAF-Top-Hosts",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -129,7 +154,7 @@
 				}
 			}
 		},
-		"QueryAggregateTopIpBlockedByRateBasedRule": {
+		"QueryTopIpBlockedByRateBasedRule": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -137,7 +162,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-IP_blocked_by_rate-based_rule",
+				"Name": "WAF-query-samples/CWT-WAF-Top-IP_blocked_by_rate-based_rule",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -153,7 +178,7 @@
 				}
 			}
 		},
-		"QueryAggregateTerminatingRule": {
+		"QueryTopTerminatingRule": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -161,7 +186,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-Terminating-Rule",
+				"Name": "WAF-query-samples/CWT-WAF-Top-Terminating-Rule",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -175,7 +200,7 @@
 				}
 			}
 		},
-		"QueryAggregateUri": {
+		"QueryTopUri": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -183,7 +208,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-URI",
+				"Name": "WAF-query-samples/CWT-WAF-Top-URI",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -197,7 +222,7 @@
 				}
 			}
 		},
-		"QueryAggregateUserAgent": {
+		"QueryTopUserAgent": {
 			"Type": "AWS::Logs::QueryDefinition",
 			"Properties": {
 				"LogGroupNames": [
@@ -205,7 +230,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Top-UserAgent",
+				"Name": "WAF-query-samples/CWT-WAF-Top-UserAgent",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -228,7 +253,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Aggregate-Allow-Requests",
+				"Name": "WAF-query-samples/CWT-WAF-Aggregate-Allow-Requests",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -252,7 +277,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Aggregate-Block-Requests",
+				"Name": "WAF-query-samples/CWT-WAF-Aggregate-Block-Requests",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -278,7 +303,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-COUNT_Action",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-COUNT_Action",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -289,8 +314,7 @@
 							"| sort @timestamp desc\n",
 							"| parse @message '\"nonTerminatingMatchingRules\":[{*}]' as nonTerminatingMatchingRules\n",
 							"| parse @message '\"excludedRules\":[{*}]' as excludedRules\n",
-							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country, excludedRules, nonTerminatingMatchingRules\n",
-							"| limit 100\n"
+							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country, excludedRules, nonTerminatingMatchingRules"
 						]
 					]
 				}
@@ -304,7 +328,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-IP_blocked_by_rate-based_rule",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-IP_blocked_by_rate-based_rule",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -313,8 +337,7 @@
 							"fields @timestamp, @message\n",
 							"| filter terminatingRuleType =\"RATE_BASED\"\n",
 							"| sort @timestamp desc\n",
-							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country, terminatingRuleId\n",
-							"| limit 100\n"
+							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country, terminatingRuleId"
 						]
 					]
 				}
@@ -328,7 +351,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-COUNT-per-rule",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-COUNT-per-rule",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -337,8 +360,7 @@
 							"fields @timestamp, @message\n",
 							"| filter @message like /\"EXCLUDED_AS_COUNT\",\"ruleId\":\"HostingProviderIPList\"/\n",
 							"| sort @timestamp desc\n",
-							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country\n",
-							"| limit 100\n"
+							"| display @timestamp, httpRequest.clientIp,httpRequest.uri, httpRequest.country"
 						]
 					]
 				}
@@ -352,15 +374,71 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-XSS-SQL",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-XSS-SQL",
 				"QueryString": {
 					"Fn::Join": [
 						"",
 						[
 							"#Filter for Cross-Site Scripting / SQL Injection\n",
 							"fields @timestamp, terminatingRuleId, action, httpRequest.clientIp as ClientIP, httpRequest.country as Country, terminatingRuleMatchDetails.0.conditionType as ConditionType, terminatingRuleMatchDetails.0.location as Location, terminatingRuleMatchDetails.0.matchedData.0 as MatchedData\n",
-							"| filter (ConditionType like \"XSS\" or ConditionType like \"SQL\")\n",
-							"| limit 100"
+							"| filter (ConditionType like \"XSS\" or ConditionType like \"SQL\")"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterSpecificClientIPBlock": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "WAF-query-samples/CWT-WAF-Filter-Specific-Client-IP-BLOCK",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"# Extracts blocked requests per specific client IP.\n",
+							"fields @timestamp, @message\n",
+							"| filter action = \"BLOCK\"\n",
+							"| filter httpRequest.clientIp = \"1.2.3.4\"    # Replace the value with the specific IP address\n",
+							"| parse @message '\"headers\":[*]' as Headers\n",
+							"| parse @message '\"labels\":[*]' as Labels\n",
+							"| parse @message '\"args\":*,' as args\n",
+							"| parse @message '\"terminatingRuleMatchDetails\":[*]' as terminatingRuleMatchDetails\n",
+							"| sort @timestamp desc\n",
+							"| display @timestamp, httpRequest.clientIp, httpRequest.country, httpRequest.uri, Headers, args, terminatingRuleId, terminatingRuleMatchDetails, Labels"
+						]
+					]
+				}
+			}
+		},
+		"QueryFilterSpecificClientIPCount": {
+			"Type": "AWS::Logs::QueryDefinition",
+			"Properties": {
+				"LogGroupNames": [
+					{
+						"Ref": "LogGroupToQuery"
+					}
+				],
+				"Name": "WAF-query-samples/CWT-WAF-Filter-Specific-Client-IP-COUNT",
+				"QueryString": {
+					"Fn::Join": [
+						"",
+						[
+							"# Extracts blocked requests per specific client IP.\n",
+							"fields @timestamp, @message\n",
+							"| filter @message like \"COUNT\"\n",
+							"| filter httpRequest.clientIp = \"1.2.3.4\"    # Replace the value with the specific IP address\n",
+							"| parse @message '\"headers\":[*]' as Headers\n",
+							"| parse @message '\"labels\":[*]' as Labels\n",
+							"| parse @message '\"args\":*,' as args\n",
+							"| parse @message '\"nonTerminatingMatchingRules\":[{*}]' as nonTerminatingMatchingRules\n",
+							"| parse @message '\"excludedRules\":[{*}]' as excludedRules\n",
+							"| sort @timestamp desc\n",
+							"| display @timestamp, httpRequest.clientIp, httpRequest.country, httpRequest.uri, Headers, args, excludedRules, nonTerminatingMatchingRules, Labels"
 						]
 					]
 				}
@@ -374,7 +452,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-Specific-Rule",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-Specific-Rule",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -385,8 +463,7 @@
 							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
 							"| filter Rule = \"PREFMManaged-AWSManagedRulesCommonRuleSet-1639427788235\"\n",
 							"| display action, Country, ClientIP, ConditionType, MatchedData, URI, Host, UserAgent\n",
-							"| sort ConditionType desc\n",
-							"| limit 100"
+							"| sort ConditionType desc"
 						]
 					]
 				}
@@ -400,7 +477,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-Specific-String",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-Specific-String",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -410,8 +487,7 @@
 							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
 							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
 							"| filter @message like \"{jndi:ldap\"\n",
-							"| sort action, URI desc\n",
-							"| limit 100"
+							"| sort action, URI desc"
 						]
 					]
 				}
@@ -425,16 +501,15 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-Host",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-Host",
 				"QueryString": {
 					"Fn::Join": [
 						"",
 						[
 							"#Filter on Host\n",
-							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
-							"| filter Host != \"cwt.rtaa.ninja\"\n",
-							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI\n",
-							"| limit 100"
+							"parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| filter Host != \"cwt.rtaa.ninja\"    # Replace the value with your string.\n",
+							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI"
 						]
 					]
 				}
@@ -448,16 +523,16 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-Host-and-Aggregate",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-Host-and-Aggregate",
 				"QueryString": {
 					"Fn::Join": [
 						"",
 						[
 							"#Filter on Host & Aggregate on Rule, Action, Country, ClientIP\n",
-							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
-							"| filter Host != \"cwt.rtaa.ninja\"\n",
+							"parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
+							"| filter Host != \"cwt.rtaa.ninja\"    # Replace the value with your string.\n",
 							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI\n",
-							"| stats count() as Requests by Host, Rule, action, Country, ClientIP\n",
+							"| stats count(*) as Requests by Host, Rule, action, Country, ClientIP\n",
 							"| sort Requests desc\n",
 							"| limit 100"
 						]
@@ -473,16 +548,15 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-UserAgent",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-UserAgent",
 				"QueryString": {
 					"Fn::Join": [
 						"",
 						[
 							"#Filter on UserAgent\n",
-							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
-							"| filter userAgent like \"Mozilla\"\n",
-							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI\n",
-							"| limit 100"
+							"parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
+							"| filter userAgent like \"Mozilla\"    # Replace the value with a specific string.\n",
+							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.uri as URI"
 						]
 					]
 				}
@@ -496,7 +570,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-POST",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-POST",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -506,8 +580,7 @@
 							"| fields terminatingRuleId as Rule, action, httpRequest.country as Country, httpRequest.clientIp as ClientIP, httpRequest.httpMethod as Method, httpRequest.uri as URI, httpRequest.requestId as RequestID\n",
 							"| filter httpRequest.httpMethod = \"POST\"\n",
 							"| display Rule, action, Country, ClientIP, Method, URI, Host, UserAgent, RequestID\n",
-							"| sort Rule, action desc\n",
-							"| limit 100"
+							"| sort Rule, action desc"
 						]
 					]
 				}
@@ -521,7 +594,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Filter-Not-Country-X",
+				"Name": "WAF-query-samples/CWT-WAF-Filter-Not-Country-X",
 				"QueryString": {
 					"Fn::Join": [
 						"",
@@ -531,8 +604,7 @@
 							"| parse @message /(?i)\\{\"name\":\"user-agent\",\"value\":\"(?<UserAgent>.*?)\"\\}/\n",
 							"| parse @message /\\{\"name\":\"(H|h)ost\",\"value\":\"(?<Host>.*?)\"\\}/\n",
 							"| filter Country != \"US\"\n",
-							"| sort Country, action desc\n",
-							"| limit 100"
+							"| sort Country, action desc"
 						]
 					]
 				}
@@ -546,7 +618,7 @@
 						"Ref": "LogGroupToQuery"
 					}
 				],
-				"Name": "CWT-WAF-Time-Series-Terminating-Rule",
+				"Name": "WAF-query-samples/CWT-WAF-Time-Series-Terminating-Rule",
 				"QueryString": {
 					"Fn::Join": [
 						"",
